@@ -1,8 +1,14 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * The client is simple, has 2 threaded tasks , one is implemented
+ * 1 - RecieveTask , implements runnable : Waits for messages to be recieved by the server
+ * 2- UpdateListTask , implements Runnable : Waits for user list updates from the serveer    
  */
+
+/**
+ * Work left :
+ * 1 - Add the logic for the UpdateList task
+ * 2 - Complete the gui
+*/
 
 package tcp;
 

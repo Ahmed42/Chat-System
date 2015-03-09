@@ -1,7 +1,6 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * This the data structure used to transfer user information between the client and the server
+ * via object serialization and deserialization
  */
 
 package tcp;

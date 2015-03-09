@@ -1,8 +1,26 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * TCP based multithreaded server , that handles users (clients) and perform message routing
+ * The server has 5 tasks , 3 of them are now implemented:
+ * 0 - Register task - not completed yet partial implementation : It recives user credentials and verfies the user
+ * 1-  ReceiveTask : implements Runnable , one task is created for each user logged in , it recives the message from the user 
+ *     and put the message in the server inboc
+ * 2- RouteTask : implements Runnable , it runs in case the server inbox was not empty using locks, This task enumerates all messages in the
+ *    server inbox and route them to their respective users
+ *    The route task uses a HashMap data structure to convert usernames to connections 
+ * 3- 
+ * 3 - Update online users list - not implemented yet  
+ * 4- Perfrom logout - not implemented yet
+ * 
+ *
  */
+
+/**
+* Work left:
+* complete the gui of the server
+* complete the logic of the register task
+* add the  logic for the 2 tasks
+* 
+*/
 
 package tcp;
 
