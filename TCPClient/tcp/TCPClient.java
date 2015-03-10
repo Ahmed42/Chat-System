@@ -18,9 +18,13 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.*;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.*;
 
 /**
@@ -35,6 +39,9 @@ public class TCPClient extends JFrame {
     private final JButton sendButton;
     private final Socket connection;
     private final String userName;
+    private final JLabel onlineUsersLabel;
+    
+    private static final long PERIOD = 500;
     
     public TCPClient(String userName , Socket connection){
         
@@ -45,6 +52,7 @@ public class TCPClient extends JFrame {
         recepientName = new JTextField(25);
         message = new JTextField(25);
         Inbox = new JTextField(25);
+        onlineUsersLabel = new JLabel();
         sendButton = new JButton(" Send Message ");
         setSize(400,200);
         setLayout(new FlowLayout());
@@ -53,6 +61,7 @@ public class TCPClient extends JFrame {
         add(Inbox);
         sendButton.addActionListener(new SendActionListener());
         add(sendButton);
+        add(onlineUsersLabel);
         
         setVisible(true);
         /********************************/
@@ -62,11 +71,10 @@ public class TCPClient extends JFrame {
     }
     
     public static void main(String[] args) {
-        
         LoginForm form = new LoginForm();
         Socket connection;
         String name;
-        
+        System.out.println(form.socket);
         while(form.socket == null)
         {
         //wait    
@@ -79,6 +87,9 @@ public class TCPClient extends JFrame {
         
         TCPClient client = new TCPClient(name, connection);
         executor.execute(client.new RecieveTask());
+        // Periodically executes the ConfirmLivenessTask
+        java.util.Timer timer = new java.util.Timer();
+        timer.scheduleAtFixedRate(client.new ConfirmLivenessTask(),1000,PERIOD);
     }
     
     class SendActionListener implements ActionListener{
@@ -94,28 +105,62 @@ public class TCPClient extends JFrame {
     }
     
     }
-    
-    class RecieveTask implements Runnable{
+
+    class RecieveTask implements Runnable {
 
         @Override
         public void run() {
-            
-            try { 
-                while(true){
+
+            try {
+                while (true) {
                     ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                    Message newMessage = (Message)in.readObject();
-                    System.out.println(newMessage.getContents());
-                    Inbox.setText(newMessage.getContents());
+                    Object newMessage = in.readObject();
+                    if (newMessage instanceof UpdateOnlineUsersMessage) {
+                        Object[] onlineUsers = ((UpdateOnlineUsersMessage) newMessage).getOnlineUsers();
+                        String onlineUsersText = "";
+                        for(Object user: onlineUsers) {
+                            onlineUsersText += (String) user + " ";
+                        }
+                        onlineUsersLabel.setText(onlineUsersText);
+                    } else {
+                        System.out.println(((Message) newMessage).getContents());
+                        Inbox.setText(((Message) newMessage).getContents());
+                    }
                 }
-            }
-            catch (IOException | ClassNotFoundException ex) {
+            } catch (IOException | ClassNotFoundException ex) {
                 System.out.println("At ReciveTask" + ex.getMessage());
             }
         }
     }
+    
+    // A task that sends "Alive" to the server so that the server won't go timeout
+    class ConfirmLivenessTask extends TimerTask {
+
+        @Override
+        public void run() {
+            try {
+                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                out.writeObject("Alive");
+                
+            } catch (IOException ex) {
+                Logger.getLogger(TCPClient.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
         
+    }
+
+}
+
+class UpdateOnlineUsersMessage implements Serializable {
+    private Object[] onlineUsers;
     
+    UpdateOnlineUsersMessage(Object[] onlineUsers) {
+        this.onlineUsers = onlineUsers;
+    }
     
+    Object[] getOnlineUsers() {
+        return onlineUsers;
+    }
 }
 
 
