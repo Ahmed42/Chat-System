@@ -27,15 +27,21 @@ package tcp;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 
 
 /**
@@ -64,7 +70,6 @@ public class TCPServer {
         try{
             
             TCPServer server = new TCPServer();        
-            
             ExecutorService executor = Executors.newFixedThreadPool(2);
             executor.execute(server.new RegisterTask());
             executor.execute(server.new RouteTask());
@@ -88,10 +93,10 @@ public class TCPServer {
                     String name = newUser.getUserName();
                     System.out.println(name);
                     userPortMapping.put(name, connection);
-                   // ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-                   //out.writeUTF("TRUE");
+                    // Since a new user went online, an update needs to be sent to all online users
+                    sendUpdateOnlineUsersMessage();
                     System.out.println("At register task");
-                    executor.execute(new RecieveTask(connection));
+                    executor.execute(new RecieveTask(name,connection));
                 }
             }
             catch (IOException | ClassNotFoundException ex) {
@@ -103,30 +108,42 @@ public class TCPServer {
     }
     
     class RecieveTask implements Runnable{
-        
+        private final int TIMEOUT_DURATON = 10000;
         public Socket client;
+        String username;
         
-        public RecieveTask(Socket client){
+        public RecieveTask(String name, Socket client){
             this.client = client;
+            this.username = name;
+            try {
+                this.client.setSoTimeout(TIMEOUT_DURATON);
+            } catch (SocketException ex) {
+                Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-        
+
         @Override
         public void run() {
             ObjectInputStream in;
-            try{
-                while(true){
-                    System.out.println("At recive task");
+
+            while (true) {
+                System.out.println("At recive task");
+                try {
                     in = new ObjectInputStream(client.getInputStream());
-                    Message newMessage = (Message)in.readObject();
-                    System.out.println(newMessage.getContents());
-                    addMessage(newMessage);
-                    
+                    Object newMessage = in.readObject();
+                    if (newMessage instanceof Message) {
+                        addMessage((Message)newMessage);
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    userPortMapping.remove(username);
+                    sendUpdateOnlineUsersMessage();
+                    break;
                 }
-            }
-            catch(IOException | ClassNotFoundException e){
-                System.out.println(e.getMessage());
+
             }
         }
+            
+        
         
         public synchronized void addMessage(Message newMessage){
             try{
@@ -159,7 +176,7 @@ public class TCPServer {
             while(Inbox.size() == 0){
                 empty.await();
             }
-            System.out.println("At send Messages");
+            System.out.println("At send Messages");         
             for(Message message : Inbox){  
                 String recepientName = message.getRecpt();
                 Socket recepientSocket = userPortMapping.get(recepientName); 
@@ -176,4 +193,27 @@ public class TCPServer {
         }
     }
     
+    void sendUpdateOnlineUsersMessage() {
+            UpdateOnlineUsersMessage onlineUsers = new UpdateOnlineUsersMessage(userPortMapping.keySet().toArray());
+            for(Socket connection : userPortMapping.values()) {
+                try {
+                    ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                    out.writeObject(onlineUsers);
+                } catch (IOException ex) {
+                    Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+}
+
+class UpdateOnlineUsersMessage implements Serializable {
+    private Object[] onlineUsers;
+    
+    UpdateOnlineUsersMessage(Object[] onlineUsers) {
+        this.onlineUsers = onlineUsers;
+    }
+    
+    Object[] getOnlineUsers() {
+        return onlineUsers;
+    }
 }

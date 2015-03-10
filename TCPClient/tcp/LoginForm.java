@@ -74,6 +74,7 @@ public class LoginForm extends JFrame {
         // String Logged = in.readUTF();
          System.out.println("Here 3");
          socket = loginSocket;
+         //System.out.println(socket);
          
         }catch(Exception e){
            System.out.println(e.getMessage());
