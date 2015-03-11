@@ -254,11 +254,11 @@ public class TCPServer extends JFrame {
 
         allUsersLabel.setText("All users");
 
-        startServerButton.setText("Start server");
+        startServerButton.setText("Stop server");
         startServerButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                startServerButtonActionPerformed(evt);
+                stopServerButtonActionPerformed(evt);
             }
         });
 
@@ -354,7 +354,7 @@ public class TCPServer extends JFrame {
         // TODO add your handling code here:
     }                                                
 
-    private void startServerButtonActionPerformed(java.awt.event.ActionEvent evt) {                                                  
+    private void stopServerButtonActionPerformed(java.awt.event.ActionEvent evt) {                                                  
         // TODO add your handling code here:
     } 
     
