@@ -1,18 +1,14 @@
-/**
- * The client is simple, has 2 threaded tasks , one is implemented
- * 1 - RecieveTask , implements runnable : Waits for messages to be recieved by the server
- * 2- UpdateListTask , implements Runnable : Waits for user list updates from the serveer    
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
-
-/**
- * Work left :
- * 1 - Add the logic for the UpdateList task
- * 2 - Complete the gui
-*/
 
 package tcp;
 
-import java.awt.FlowLayout;
+
+import java.awt.Dimension;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -33,48 +29,195 @@ import javax.swing.*;
  */
 public class TCPClient extends JFrame {
     
-    private final JTextField recepientName;
-    private final JTextField message;
-    private final JTextField Inbox;
-    private final JButton sendButton;
+    private javax.swing.JTextArea InboxTextArea;
+    private javax.swing.JScrollPane inboxScrollPane;
+    private javax.swing.JSeparator jSeparator1;
+    private javax.swing.JSeparator jSeparator2;
+    private javax.swing.JButton logOutButton;
+    private javax.swing.JPanel masterPanel;
+    private javax.swing.JLabel messageLabel;
+    private javax.swing.JScrollPane messageScrollPane;
+    private javax.swing.JTextArea messageTextArea;
+    private javax.swing.JLabel onlineLabel;
+    private javax.swing.JList onlineList;
+    private javax.swing.JScrollPane onlineScrollPane;
+    private javax.swing.JButton sendButton;
+    private javax.swing.JLabel inboxLabel;
+    // End of variables declaration  
     private final Socket connection;
     private final String userName;
-    private final JLabel onlineUsersLabel;
-    
     private static final long PERIOD = 500;
+    
+      @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
+    private void initComponents() {
+
+        masterPanel = new javax.swing.JPanel();
+        onlineScrollPane = new javax.swing.JScrollPane();
+        onlineList = new javax.swing.JList();
+        sendButton = new javax.swing.JButton();
+        inboxScrollPane = new javax.swing.JScrollPane();
+        InboxTextArea = new javax.swing.JTextArea();
+        onlineLabel = new javax.swing.JLabel();
+        messageScrollPane = new javax.swing.JScrollPane();
+        messageTextArea = new javax.swing.JTextArea();
+        jSeparator1 = new javax.swing.JSeparator();
+        messageLabel = new javax.swing.JLabel();
+        logOutButton = new javax.swing.JButton();
+        jSeparator2 = new javax.swing.JSeparator();
+        inboxLabel = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        onlineList.setModel(new javax.swing.AbstractListModel() {
+            String[] strings = { "Ahmed", "Motasim", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public Object getElementAt(int i) { return strings[i]; }
+        });
+        onlineScrollPane.setViewportView(onlineList);
+
+        sendButton.setText("Send");
+        sendButton.addActionListener(new SendActionListener());
+
+        InboxTextArea.setEditable(false);
+        InboxTextArea.setColumns(20);
+        InboxTextArea.setRows(5);
+        inboxScrollPane.setViewportView(InboxTextArea);
+
+        onlineLabel.setText("Online users:");
+
+        messageTextArea.setColumns(20);
+        messageTextArea.setRows(5);
+        messageScrollPane.setViewportView(messageTextArea);
+
+        messageLabel.setText("Message to send");
+
+        logOutButton.setText("Log out");
+        logOutButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                logOutButtonActionPerformed(evt);
+            }
+        });
+
+        inboxLabel.setText("Messages :");
+
+        javax.swing.GroupLayout masterPanelLayout = new javax.swing.GroupLayout(masterPanel);
+        masterPanel.setLayout(masterPanelLayout);
+        masterPanelLayout.setHorizontalGroup(
+            masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(masterPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jSeparator2)
+                            .addGroup(masterPanelLayout.createSequentialGroup()
+                                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(logOutButton)
+                                    .addComponent(onlineScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 190, Short.MAX_VALUE))
+                                .addGap(6, 6, 6)))
+                        .addGap(23, 23, 23))
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addComponent(onlineLabel)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addComponent(inboxScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 239, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(messageLabel)
+                            .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(sendButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 225, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(messageScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 249, Short.MAX_VALUE)))
+                    .addComponent(inboxLabel))
+                .addContainerGap())
+        );
+        masterPanelLayout.setVerticalGroup(
+            masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(masterPanelLayout.createSequentialGroup()
+                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(onlineLabel)
+                    .addComponent(messageLabel)
+                    .addComponent(inboxLabel))
+                .addGap(6, 6, 6)
+                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addComponent(messageScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(sendButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 15, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(207, 207, 207))
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addComponent(onlineScrollPane)
+                        .addGap(18, 18, 18)
+                        .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(8, 8, 8)
+                        .addComponent(logOutButton))
+                    .addComponent(inboxScrollPane))
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(masterPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(masterPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
+        pack();
+    }// </editor-fold>                        
+
     
     public TCPClient(String userName , Socket connection){
         
         setTitle(userName);
         this.connection = connection;
         this.userName = userName;    
-        /*Init the compoents of the frame*/
-        recepientName = new JTextField(25);
-        message = new JTextField(25);
-        Inbox = new JTextField(25);
-        onlineUsersLabel = new JLabel();
-        sendButton = new JButton(" Send Message ");
-        setSize(400,200);
-        setLayout(new FlowLayout());
-        add(recepientName);
-        add(message);
-        add(Inbox);
-        sendButton.addActionListener(new SendActionListener());
-        add(sendButton);
-        add(onlineUsersLabel);
-        
+        initComponents();
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setLocation(dim.width/2-this.getSize().width/2, dim.height/2-this.getSize().height/2);
+        setStyle();
         setVisible(true);
         /********************************/
         
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+    }
+    
+    public void setStyle(){
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(TCPClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
         
     }
     
+    private void logOutButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
+        // TODO add your handling code here:
+    }                                            
+
+    
     public static void main(String[] args) {
+        
         LoginForm form = new LoginForm();
         Socket connection;
         String name;
-        System.out.println(form.socket);
+        
         while(form.socket == null)
         {
         //wait    
@@ -86,10 +229,13 @@ public class TCPClient extends JFrame {
         ExecutorService executor = Executors.newCachedThreadPool();
         
         TCPClient client = new TCPClient(name, connection);
+        client.setStyle();
         executor.execute(client.new RecieveTask());
+        
         // Periodically executes the ConfirmLivenessTask
         java.util.Timer timer = new java.util.Timer();
         timer.scheduleAtFixedRate(client.new ConfirmLivenessTask(),1000,PERIOD);
+ 
     }
     
     class SendActionListener implements ActionListener{
@@ -97,15 +243,21 @@ public class TCPClient extends JFrame {
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
-            ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-            out.writeObject(new Message(userName, recepientName.getText(), message.getText()));
+            if(onlineList.getSelectedValue() != null){
+                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                out.writeObject(new Message(userName, (String)onlineList.getSelectedValue(), messageTextArea.getText()));
+                String message = messageTextArea.getText();
+                String old = InboxTextArea.getText();
+                InboxTextArea.setText(old + "\n"+"Me to " + onlineList.getSelectedValue()+ " : "
+                                                                    + message +"\n"+ getSeparator()+"\n");
+            }
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
         }
     }
     
     }
-
+    
     class RecieveTask implements Runnable {
 
         @Override
@@ -117,20 +269,23 @@ public class TCPClient extends JFrame {
                     Object newMessage = in.readObject();
                     if (newMessage instanceof UpdateOnlineUsersMessage) {
                         Object[] onlineUsers = ((UpdateOnlineUsersMessage) newMessage).getOnlineUsers();
-                        String onlineUsersText = "";
-                        for(Object user: onlineUsers) {
-                            onlineUsersText += (String) user + " ";
-                        }
-                        onlineUsersLabel.setText(onlineUsersText);
+                        onlineList.setListData(onlineUsers);
                     } else {
-                        System.out.println(((Message) newMessage).getContents());
-                        Inbox.setText(((Message) newMessage).getContents());
+                        //System.out.println(((Message) newMessage).getContents());
+                        Message clientMessage = (Message)newMessage;
+                        String oldText = InboxTextArea.getText();
+                        InboxTextArea.setText(oldText + "\n"+ 
+                                        clientMessage.getSender() +" : "+ clientMessage.getContents()+"\n"+getSeparator());
                     }
                 }
             } catch (IOException | ClassNotFoundException ex) {
                 System.out.println("At ReciveTask" + ex.getMessage());
             }
         }
+    }
+    
+    String getSeparator(){
+        return "- - - - - - - - - - - - -";
     }
     
     // A task that sends "Alive" to the server so that the server won't go timeout
@@ -162,5 +317,3 @@ class UpdateOnlineUsersMessage implements Serializable {
         return onlineUsers;
     }
 }
-
-
