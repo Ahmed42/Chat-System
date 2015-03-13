@@ -496,11 +496,51 @@ public class TCPServer extends JFrame {
     }
 
     private void deleteUserButtonActionPerformed(java.awt.event.ActionEvent evt) {                                                 
-        // TODO add your handling code here:
+        try{
+            
+            offlineUsers.remove(allUsersList.getSelectedIndex());
+            registeredUsers.remove(allUsersList.getSelectedIndex());
+            userPortMapping.remove((String)allUsersList.getSelectedValue());
+            allUsersList.setListData(offlineUsers);
+            sendUpdateOnlineUsersMessage();
+            System.out.println(allUsersList.getSelectedIndex());
+            
+        }catch(Exception e){
+            
+            allUsersList.setListData(offlineUsers);
+            sendUpdateOnlineUsersMessage();
+        }
     }                                                
 
     private void stopServerButtonActionPerformed(java.awt.event.ActionEvent evt) {                                                  
-        // TODO add your handling code here:
+        try {
+
+            Object[] users = userPortMapping.keySet().toArray();
+            UpdateOnlineUsersMessage clearedUsers = new UpdateOnlineUsersMessage(new String[]{});
+            
+            for(Object user : users){
+                ObjectOutputStream out = new ObjectOutputStream(userPortMapping.get(user.toString()).getOutputStream());
+                out.writeObject(new Message("Server", user.toString(),"Server Stopped !!"));
+            }
+            
+            for(Object user : users){
+                ObjectOutputStream out = new ObjectOutputStream(userPortMapping.get(user.toString()).getOutputStream());
+                out.writeObject(clearedUsers);
+            }
+            
+            
+            server.close();
+            ObjectOutputStream out = new ObjectOutputStream(fileOut);
+            out.writeObject(registeredUsers);
+            System.exit(0);
+            this.dispose();
+            
+        } catch (IOException ex) {
+            Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        finally{
+            
+        }
     } 
     
     
