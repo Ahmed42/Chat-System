@@ -47,8 +47,9 @@ public class TCPClient extends JFrame {
     private final Socket connection;
     private final String userName;
     private static final long PERIOD = 500;
+    private JButton cleaConversationButton;
     
-      @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
 
@@ -66,11 +67,12 @@ public class TCPClient extends JFrame {
         logOutButton = new javax.swing.JButton();
         jSeparator2 = new javax.swing.JSeparator();
         inboxLabel = new javax.swing.JLabel();
+        cleaConversationButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         onlineList.setModel(new javax.swing.AbstractListModel() {
-            String[] strings = { "Ahmed", "Motasim", "Item 3", "Item 4", "Item 5" };
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
@@ -99,7 +101,14 @@ public class TCPClient extends JFrame {
             }
         });
 
-        inboxLabel.setText("Messages :");
+        inboxLabel.setText("Inbox :");
+
+        cleaConversationButton.setText("Clear Chat");
+        cleaConversationButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cleaConversationButtonActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout masterPanelLayout = new javax.swing.GroupLayout(masterPanel);
         masterPanel.setLayout(masterPanelLayout);
@@ -109,28 +118,25 @@ public class TCPClient extends JFrame {
                 .addContainerGap()
                 .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(masterPanelLayout.createSequentialGroup()
-                        .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jSeparator2)
-                            .addGroup(masterPanelLayout.createSequentialGroup()
-                                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(logOutButton)
-                                    .addComponent(onlineScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 190, Short.MAX_VALUE))
-                                .addGap(6, 6, 6)))
-                        .addGap(23, 23, 23))
-                    .addGroup(masterPanelLayout.createSequentialGroup()
-                        .addComponent(onlineLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addComponent(logOutButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(cleaConversationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 119, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(onlineScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 196, Short.MAX_VALUE)
+                    .addComponent(onlineLabel)
+                    .addComponent(jSeparator2))
+                .addGap(19, 19, 19)
                 .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(masterPanelLayout.createSequentialGroup()
-                        .addComponent(inboxScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 239, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(messageLabel)
-                            .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(sendButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 225, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(messageScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 249, Short.MAX_VALUE)))
-                    .addComponent(inboxLabel))
+                        .addComponent(inboxLabel)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(inboxScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 246, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(messageLabel)
+                    .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(sendButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 225, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(messageScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 246, Short.MAX_VALUE))
                 .addContainerGap())
         );
         masterPanelLayout.setVerticalGroup(
@@ -154,7 +160,9 @@ public class TCPClient extends JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(8, 8, 8)
-                        .addComponent(logOutButton))
+                        .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(logOutButton)
+                            .addComponent(cleaConversationButton)))
                     .addComponent(inboxScrollPane))
                 .addContainerGap())
         );
@@ -260,6 +268,10 @@ public class TCPClient extends JFrame {
     }
     
     }
+    
+    private void cleaConversationButtonActionPerformed(java.awt.event.ActionEvent evt) {                                                       
+        InboxTextArea.setText("");
+    }  
     
     class RecieveTask implements Runnable {
 
