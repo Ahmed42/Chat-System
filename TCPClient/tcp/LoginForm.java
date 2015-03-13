@@ -29,6 +29,7 @@ public class LoginForm extends JFrame {
     private javax.swing.JLabel passLabel;
     private javax.swing.JPasswordField passwordField;
     private javax.swing.JButton signupButton;
+    private javax.swing.JButton guestButton;
     private javax.swing.JLabel signupLabel;
     private javax.swing.JLabel titleLabel;
     private boolean logged;
@@ -43,8 +44,8 @@ public class LoginForm extends JFrame {
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
-    JButton signInAsGuestButton;
-      @SuppressWarnings("unchecked")
+    
+     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
 
@@ -58,7 +59,8 @@ public class LoginForm extends JFrame {
         signupLabel = new javax.swing.JLabel();
         nameLabel = new javax.swing.JLabel();
         passLabel = new javax.swing.JLabel();
-        
+        guestButton = new javax.swing.JButton();
+
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         titleLabel.setFont(new java.awt.Font("Yu Mincho Demibold", 0, 18)); // NOI18N
@@ -66,6 +68,7 @@ public class LoginForm extends JFrame {
 
         loginButton.setText("Log in");
         loginButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 loginButtonActionPerformed(evt);
             }
@@ -73,6 +76,7 @@ public class LoginForm extends JFrame {
 
         signupButton.setText("Sign up");
         signupButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 signupButtonActionPerformed(evt);
             }
@@ -83,6 +87,14 @@ public class LoginForm extends JFrame {
         nameLabel.setText("User name :");
 
         passLabel.setText("Password :");
+
+        guestButton.setText("Guest");
+        guestButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                guestButtonActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -97,15 +109,16 @@ public class LoginForm extends JFrame {
                         .addGap(155, 155, 155)
                         .addComponent(titleLabel))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(216, 216, 216)
-                        .addComponent(loginButton))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(91, 91, 91)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(nameLabel)
                             .addComponent(passLabel))
                         .addGap(30, 30, 30)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(loginButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(guestButton, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addComponent(passwordField)
                             .addComponent(nameField))))
                 .addGap(164, 164, 164))
@@ -130,7 +143,9 @@ public class LoginForm extends JFrame {
                     .addComponent(passwordField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(passLabel))
                 .addGap(24, 24, 24)
-                .addComponent(loginButton)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(loginButton)
+                    .addComponent(guestButton))
                 .addGap(18, 18, 18)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -156,9 +171,10 @@ public class LoginForm extends JFrame {
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(13, Short.MAX_VALUE))
         );
-
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setLocation(dim.width/2-this.getSize().width/2, dim.height/2-this.getSize().height/2);
         pack();
-    }// </editor-fold>                        
+    }// </editor-fold>                    
     
     public String getUserName(){
         return nameField.getText();
@@ -266,8 +282,9 @@ public class LoginForm extends JFrame {
     }
     
     // Please add the "Sign in as guest" button
-    private void signinAsGuestButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
+    private void guestButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
         try {
+            
             socket = new Socket("localhost" , 8000);
             socket.setSoTimeout(TIMEOUT_DURATON);
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
