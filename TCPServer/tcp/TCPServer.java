@@ -26,6 +26,12 @@ package tcp;
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -35,6 +41,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Random;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,20 +52,57 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-
+//import java.util.UUID;
 /**
  *
  * @author Motasim
  */
 public class TCPServer extends JFrame {
-    
+    Vector<UserCredentials> registeredUsers; // A vector of all registered users
+    Vector<String> guestUsers;
+    Vector<String> offlineUsers; // A vector of offline registered users
+    HashMap<String,Socket> userPortMapping; // Maps online users' usernames to their connections (contains both registered and guests)
     LinkedList<Message> Inbox;
-    HashMap<String,Socket> userPortMapping;
     ServerSocket server ;
     Lock sendLock;
     Condition empty;
+    FileOutputStream fileOut;
+    FileInputStream fileIn;
+    private final int TIMEOUT_DURATON = 5000;
     
     public TCPServer() throws IOException{
+        // Deserialize registered users and saved messages
+        try {
+            fileIn = new FileInputStream("registered_users.dat");
+            ObjectInputStream in = new ObjectInputStream(fileIn);
+            registeredUsers = (Vector<UserCredentials>) in.readObject();
+            fileOut = new FileOutputStream("registered_users.dat");
+        } catch (Exception ex) {
+            fileOut = new FileOutputStream("registered_users.dat");
+            registeredUsers = new Vector<>();
+            //Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       
+        this.addWindowListener(new WindowAdapter() {
+            // Perform registered users and messages serialization upon closing
+            public void windowClosing(WindowEvent e) {
+                try {
+                    ObjectOutputStream out = new ObjectOutputStream(fileOut);
+                    out.writeObject(registeredUsers);
+                    System.exit(0);
+                } catch (IOException ex) {
+                    Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+            }
+        });
+        
+        // Initializing offline users to all registered users, userPortMapping and guestUsers to empty, Inbox to users messages
+        guestUsers = new Vector<>();
+        offlineUsers = new Vector<>();
+        for(UserCredentials credential: registeredUsers) {
+            offlineUsers.add(credential.getUserName());
+        }
         
         sendLock = new ReentrantLock();
         empty = sendLock.newCondition();
@@ -89,19 +133,75 @@ public class TCPServer extends JFrame {
         }
     }
     
+    
+    /* Later ...
+    enum Request {
+        SignInRequest(), SignUpRequest(), GuestSignInRequest();
+        UserCredentials credentials;
+        private Request (UserCredentials credentials) {
+            this.credentials = credentials;
+        }
+    }*/
+    
     class RegisterTask implements Runnable{
-
+        
         @Override
         public void run() {
             ExecutorService executor = Executors.newCachedThreadPool();
             try {
                 while(true){
                     Socket connection = server.accept();
+                    connection.setSoTimeout(TIMEOUT_DURATON);
                     ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                    UserCredentials newUser = (UserCredentials)in.readObject();
-                    String name = newUser.getUserName();
-                    System.out.println(name);
-                    userPortMapping.put(name, connection);
+                    ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                            
+                    Object newUser = in.readObject();
+                    String name;
+                    // Perhaps it is better to use enum for requests
+                    if(newUser instanceof SignInRequest) { // An already registered user is requesting to be signed in 
+                        UserCredentials credentials = ((SignInRequest) newUser).getCredentials();
+                        //JOptionPane.showMessageDialog(null, "Server: Sign in request received");
+                        if(checkCredentials(credentials)) {
+                            name = credentials.getUserName();
+                            offlineUsers.remove(name); // remove from offline list
+                            // Send sign in success response to client
+                            out.writeObject(Response.SignInSuccess);
+                        }
+                        else {
+                            // Send wrong username/password response to client
+                            
+                            out.writeObject(Response.WrongUserNameOrPassword);
+                            //JOptionPane.showMessageDialog(null, "Server: Wrong cred .. message sent");
+                            continue;
+                        }
+                    }
+                    else if(newUser instanceof SignUpRequest) { // A new user requesting to be signed up
+                        UserCredentials credentials = ((SignUpRequest) newUser).getCredentials();
+                        name = credentials.getUserName();
+                        if(isUserRegistered(name)) {
+                            // Send user already exits response to client
+                            out.writeObject(Response.UserAlreadyExist);
+                            continue;
+                        } else {
+                            registerNewUser(credentials);
+                            out.writeObject(Response.SignUpSuccess);
+                        }
+                    } else if (newUser instanceof GuestSignInRequest) { // A guest user requesting to be signed in
+                        GuestNameResponse guestNameResponse;
+                        do {
+                            guestNameResponse = new GuestNameResponse(Response.assignGuestName());
+                            name = guestNameResponse.guestName;
+                        } while (doesGuestUserExist(name)); // keep generating names while the name is not unique
+                        guestUsers.add(name);
+                        //System.out.println(guestNameResponse.guestName);
+                        out.writeObject(guestNameResponse);
+                    } else {
+                        // Invalid request
+                        out.writeObject(Response.InvalidRequest);
+                        continue;
+                    }
+                    
+                    userPortMapping.put(name, connection); 
                     // Since a new user went online, an update needs to be sent to all online users
                     sendUpdateOnlineUsersMessage();
                     onlineUsersList.setListData(userPortMapping.keySet().toArray());
@@ -109,16 +209,49 @@ public class TCPServer extends JFrame {
                     executor.execute(new RecieveTask(name,connection));
                 }
             }
-            catch (IOException | ClassNotFoundException ex) {
-                System.out.println("Not found " + ex.getMessage());
+            catch (Exception ex) {
+                //JOptionPane.showMessageDialog(null, "SERVER:" + ex);
+                //System.out.println("Not found " + ex.getMessage());
             }
             
         }
+        // A more secure way should be adopted .. hashing and salting passwords
+        boolean checkCredentials(UserCredentials credentials) {
+            for(UserCredentials registeredUser: registeredUsers) {
+                String testUsername = credentials.getUserName(), registeredUsername = registeredUser.getUserName(),
+                        testPassword = new String(credentials.getPassword()), registeredPassword = new String(registeredUser.getPassword());
+                System.out.println(registeredUsername);
+                System.out.println(registeredPassword);
+                if(testUsername.equals(registeredUsername) && testPassword.equals(registeredPassword)) {
+                    return true;
+                }
+            }
+            return false;
+        }
         
+        
+        
+        void registerNewUser(UserCredentials credentials) {
+            registeredUsers.add(credentials);
+        } 
     }
     
+    boolean isUserRegistered(String name) {
+            for(UserCredentials user: registeredUsers) {
+                if((user.getUserName()).equals(name)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    
+    boolean doesGuestUserExist(String name) {
+        return guestUsers.contains(name);
+    }
+  
+    
     class RecieveTask implements Runnable{
-        private final int TIMEOUT_DURATON = 10000;
+        
         public Socket client;
         String username;
         
@@ -145,7 +278,13 @@ public class TCPServer extends JFrame {
                         addMessage((Message)newMessage);
                     }
                 } catch (IOException | ClassNotFoundException e) {
+                    // if failed to read or timeout, client probably went offline
                     userPortMapping.remove(username);
+                    if(isUserRegistered(username)) {
+                        offlineUsers.add(username);
+                    } else {
+                        guestUsers.remove(username);
+                    }
                     sendUpdateOnlineUsersMessage();
                     break;
                 }
@@ -381,4 +520,50 @@ class UpdateOnlineUsersMessage implements Serializable {
     Object[] getOnlineUsers() {
         return onlineUsers;
     }
+}
+
+enum Response implements Serializable {
+        SignInSuccess(null), WrongUserNameOrPassword(null), UserAlreadyExist(null), SignUpSuccess(null), InvalidRequest(null), GuestName(null);
+        String guestName;
+        static Random rand = new Random();
+        private Response(String guestName) {
+            this.guestName = guestName;
+        }
+        
+        static String assignGuestName() {
+            // randomely assign a random unique name to the guest
+            int id = rand.nextInt(10001);
+            return "guest" + id; 
+        }
+    };
+
+class GuestNameResponse implements Serializable {
+    String guestName;
+    GuestNameResponse(String guestName) {
+        this.guestName = guestName;
+    }
+}
+
+class SignUpRequest implements Serializable{
+    private UserCredentials credentials;
+    SignUpRequest(UserCredentials credentials) {
+        this.credentials = credentials;
+    }
+    UserCredentials getCredentials() { return credentials; }
+}
+
+class SignInRequest implements Serializable{
+    private UserCredentials credentials;
+    SignInRequest(UserCredentials credentials) {
+        this.credentials = credentials;
+    }
+    UserCredentials getCredentials() { return credentials; }
+}
+
+class GuestSignInRequest implements Serializable{
+    private UserCredentials credentials;
+    GuestSignInRequest(UserCredentials credentials) {
+        this.credentials = credentials;
+    }
+    UserCredentials getCredentials() { return credentials; }
 }

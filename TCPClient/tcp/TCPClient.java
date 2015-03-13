@@ -208,32 +208,35 @@ public class TCPClient extends JFrame {
     }
     
     private void logOutButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
-        // TODO add your handling code here:
+        // Cancels the "Alive" periodic message
+        timer.cancel();
+        // Shutdown the Receive Task
+        executor.shutdown();
+        
+        // Show the login form again
+        new LoginForm();
+        
+        // Close this window
+        this.dispose();
     }                                            
 
+    static java.util.Timer timer;
+    static ExecutorService executor;
     
-    public static void main(String[] args) {
-        
-        LoginForm form = new LoginForm();
-        Socket connection;
-        String name;
-        
-        while(form.socket == null)
-        {
-        //wait    
+    public static void initializeTCPClient(String username, Socket connection) {
+        try {
+            connection.setSoTimeout(0);
+        } catch (SocketException ex) {
+            Logger.getLogger(TCPClient.class.getName()).log(Level.SEVERE, null, ex);
         }
+        executor = Executors.newCachedThreadPool();
         
-        connection = form.socket;
-        name = form.getUserName();
-        form.setVisible(false);
-        ExecutorService executor = Executors.newCachedThreadPool();
-        
-        TCPClient client = new TCPClient(name, connection);
+        TCPClient client = new TCPClient(username, connection);
         client.setStyle();
         executor.execute(client.new RecieveTask());
         
         // Periodically executes the ConfirmLivenessTask
-        java.util.Timer timer = new java.util.Timer();
+        timer = new java.util.Timer();
         timer.scheduleAtFixedRate(client.new ConfirmLivenessTask(),1000,PERIOD);
  
     }
@@ -279,7 +282,7 @@ public class TCPClient extends JFrame {
                     }
                 }
             } catch (IOException | ClassNotFoundException ex) {
-                System.out.println("At ReciveTask" + ex.getMessage());
+                System.out.println("At ReciveTask" + ex);
             }
         }
     }

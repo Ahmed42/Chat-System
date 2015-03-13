@@ -10,6 +10,9 @@ import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.io.*;
 import java.net.*;
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.*;
 
 /**
@@ -40,7 +43,7 @@ public class LoginForm extends JFrame {
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
-    
+    JButton signInAsGuestButton;
       @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
@@ -55,7 +58,7 @@ public class LoginForm extends JFrame {
         signupLabel = new javax.swing.JLabel();
         nameLabel = new javax.swing.JLabel();
         passLabel = new javax.swing.JLabel();
-
+        
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         titleLabel.setFont(new java.awt.Font("Yu Mincho Demibold", 0, 18)); // NOI18N
@@ -175,29 +178,52 @@ public class LoginForm extends JFrame {
         
     }
     
-    public Socket performLogin(){
+
+    
+    private final int TIMEOUT_DURATON = 8000;
+    public void performLogin(){
         
-        Socket loginSocket;
+        //Socket loginSocket;
         try{
          
-         loginSocket = new Socket("localhost" , 8000);
+         socket = new Socket("localhost" , 8000);
+         socket.setSoTimeout(TIMEOUT_DURATON);
          System.out.println("Here 1"); 
-         ObjectOutputStream out = new ObjectOutputStream(loginSocket.getOutputStream());
+         ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
          
-         System.out.println("Here 2"); 
-         out.writeObject(new UserCredentials(nameField.getText(), passwordField.getPassword()));
+         System.out.println("Here 2");
          
-         DataInputStream in = new DataInputStream(loginSocket.getInputStream());
+         // Sends Sign in request to the server
+         out.writeObject(new SignInRequest(new UserCredentials(nameField.getText(), passwordField.getPassword())));
+         
+         ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+         
+         // Await for server response
+         
+         Response serverResponse = (Response) in.readObject();
+         //JOptionPane.showMessageDialog(null, "Client: reading done");
+         if(serverResponse == Response.SignInSuccess) {
+             // Sign in success
+             // proceed to initialize the client
+             TCPClient.initializeTCPClient(this.getUserName(),socket);
+             //this.setVisible(false);
+             this.dispose();
+         }
+         else if(serverResponse == Response.WrongUserNameOrPassword)  {
+             // Display wrong username/password message
+             JOptionPane.showMessageDialog(null, "Wrong username and/or password");
+         }
          
         // String Logged = in.readUTF();
          System.out.println("Here 3");
-         socket = loginSocket;
+         //socket = loginSocket;
          
         }catch(Exception e){
-           System.out.println(e.getMessage());
-            return null;
+           System.out.println(e);
+           // Display cannot connect to the server message (Due to connection failure or timeout)
+           //JOptionPane.showMessageDialog(null, e);
+           JOptionPane.showMessageDialog(null, "Cannot connect to the server");
         }
-        return null;
     }
     
      private void loginButtonActionPerformed(java.awt.event.ActionEvent evt) {                                            
@@ -205,10 +231,120 @@ public class LoginForm extends JFrame {
     }                                           
 
     private void signupButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
-        // TODO add your handling code here:
-    }       
+        try{
+         
+         socket = new Socket("localhost" , 8000);
+         socket.setSoTimeout(TIMEOUT_DURATON);
+         ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+         
+         // Sends Sign up request to the server
+         out.writeObject(new SignUpRequest(new UserCredentials(nameField.getText(), passwordField.getPassword())));
+         
+         ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+         
+         // Await for server response
+         Response serverResponse = (Response) in.readObject();
+         if(serverResponse == Response.SignUpSuccess) {
+             // Sign in success
+             // proceed to initialize the client
+             TCPClient.initializeTCPClient(this.getUserName(),socket);
+             //this.setVisible(false);
+             this.dispose();
+         }
+         else if(serverResponse == Response.UserAlreadyExist)  {
+             // Display user alread exists message
+             JOptionPane.showMessageDialog(null, "User already exists");
+         }
+         
+        }catch(Exception e){
+           System.out.println(e.getMessage());
+           //JOptionPane.showMessageDialog(null, e);
+           // Display cannot connect to the server message (Due to connection failure or timeout)
+           JOptionPane.showMessageDialog(null, "Cannot connect to the server");
+        }
+        
+    }
+    
+    // Please add the "Sign in as guest" button
+    private void signinAsGuestButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
+        try {
+            socket = new Socket("localhost" , 8000);
+            socket.setSoTimeout(TIMEOUT_DURATON);
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            
+            out.writeObject(new GuestSignInRequest(null));
+            
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            
+            Object response = in.readObject();
+            if(response instanceof GuestNameResponse) {
+                System.out.println(((GuestNameResponse) response).guestName);
+                TCPClient.initializeTCPClient(((GuestNameResponse)response).guestName,socket);
+                this.dispose();
+            }
+            else {
+                JOptionPane.showMessageDialog(null, "Cannot connect to the server");
+            }
+            
+            
+        } catch (IOException|ClassNotFoundException ex) {
+            JOptionPane.showMessageDialog(null, "Cannot connect to the server");
+            //Logger.getLogger(LoginForm.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        
+    }
     
     public static void main(String[] args){
         new LoginForm();
     }
 }
+
+    
+
+class SignUpRequest implements Serializable {
+    private UserCredentials credentials;
+    SignUpRequest(UserCredentials credentials) {
+        this.credentials = credentials;
+    }
+    UserCredentials getCredentials() { return credentials; }
+}
+
+class SignInRequest implements Serializable {
+    private UserCredentials credentials;
+    SignInRequest(UserCredentials credentials) {
+        this.credentials = credentials;
+    }
+    UserCredentials getCredentials() { return credentials; }
+}
+// Guests requests shouldn't have credentials though .. 
+class GuestSignInRequest implements Serializable{
+    private UserCredentials credentials;
+    GuestSignInRequest(UserCredentials credentials) {
+        this.credentials = credentials;
+    }
+    UserCredentials getCredentials() { return credentials; }
+}
+
+class GuestNameResponse implements Serializable {
+    String guestName;
+    GuestNameResponse(String guestName) {
+        this.guestName = guestName;
+    }
+}
+
+
+enum Response implements Serializable {
+        SignInSuccess(null), WrongUserNameOrPassword(null), UserAlreadyExist(null), SignUpSuccess(null), InvalidRequest(null), GuestName(null);
+        String guestName;
+        static Random rand = new Random();
+        private Response(String guestName) {
+            this.guestName = guestName;
+        }
+        
+        static String assignGuestName() {
+            // randomely assign a random unique name to the guest
+            int id = rand.nextInt(10001);
+            return "guest" + id; 
+        }
+    };
