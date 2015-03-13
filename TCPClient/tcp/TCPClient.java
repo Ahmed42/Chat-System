@@ -11,11 +11,15 @@ import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.*;
+import java.util.Date;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -196,6 +200,7 @@ public class TCPClient extends JFrame {
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         this.setLocation(dim.width/2-this.getSize().width/2, dim.height/2-this.getSize().height/2);
         setStyle();
+        LoadPastConversation();
         setVisible(true);
         /********************************/
         
@@ -220,7 +225,7 @@ public class TCPClient extends JFrame {
         timer.cancel();
         // Shutdown the Receive Task
         executor.shutdown();
-        
+        SaveConversation();
         // Show the login form again
         new LoginForm();
         
@@ -246,6 +251,7 @@ public class TCPClient extends JFrame {
         // Periodically executes the ConfirmLivenessTask
         timer = new java.util.Timer();
         timer.scheduleAtFixedRate(client.new ConfirmLivenessTask(),1000,PERIOD);
+        
  
     }
     
@@ -261,6 +267,7 @@ public class TCPClient extends JFrame {
                 String old = InboxTextArea.getText();
                 InboxTextArea.setText(old + "\n"+"Me to " + onlineList.getSelectedValue()+ " : "
                                                                     + message +"\n"+ getSeparator()+"\n");
+                messageTextArea.setText("");
             }
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
@@ -317,6 +324,32 @@ public class TCPClient extends JFrame {
             }
         }
         
+    }
+    
+    public void LoadPastConversation(){
+        try {
+            
+            Conversation old;
+            ObjectInputStream in = new ObjectInputStream(new FileInputStream(userName+".dat"));
+            old = (Conversation)in.readObject();
+            InboxTextArea.setText(old.getConversation());
+            
+        } catch (IOException|ClassNotFoundException ex) {
+            System.out.println("Now history file found");
+        }
+    }
+    
+    public void SaveConversation(){
+        try {
+            
+            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(userName+".dat"));
+            Conversation old = new Conversation(InboxTextArea.getText(), new Date());
+            if(! old.getConversation().equals(""))
+                out.writeObject(old);
+            
+        } catch (IOException ex) {
+            Logger.getLogger(TCPClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }

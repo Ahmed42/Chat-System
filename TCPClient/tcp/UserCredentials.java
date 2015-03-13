@@ -27,4 +27,9 @@ public class UserCredentials implements Serializable {
     public char[] getPassword(){
         return password;
     }
+    
+    @Override
+    public String toString(){
+        return userName;
+    }
 }

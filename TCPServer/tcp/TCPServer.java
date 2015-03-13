@@ -61,7 +61,7 @@ public class TCPServer extends JFrame {
     Vector<UserCredentials> registeredUsers; // A vector of all registered users
     Vector<String> guestUsers;
     Vector<String> offlineUsers; // A vector of offline registered users
-    HashMap<String,Socket> userPortMapping; // Maps online users' usernames to their connections (contains both registered and guests)
+    HashMap<String,Socket> userPortMapping; /*Maps online users' usernames to their connections (contains both registered and guests)*/
     LinkedList<Message> Inbox;
     ServerSocket server ;
     Lock sendLock;
@@ -111,8 +111,9 @@ public class TCPServer extends JFrame {
         
         /*Graphics part initialization*/
         initComponents();
+        allUsersList.setListData(offlineUsers);
         setStyle();
-        allUsersList.setListData(new String[]{});
+
         onlineUsersList.setListData(new String[]{});
         /**/
         server = new ServerSocket(8000); 
@@ -206,6 +207,7 @@ public class TCPServer extends JFrame {
                     sendUpdateOnlineUsersMessage();
                     onlineUsersList.setListData(userPortMapping.keySet().toArray());
                     System.out.println("At register task");
+                    allUsersList.setListData(registeredUsers);
                     executor.execute(new RecieveTask(name,connection));
                 }
             }
@@ -277,6 +279,9 @@ public class TCPServer extends JFrame {
                     if (newMessage instanceof Message) {
                         addMessage((Message)newMessage);
                     }
+                    /*else if (newMessage.equals("Alive")){
+                        client.setSoTimeout(TIMEOUT_DURATON);
+                    }*/
                 } catch (IOException | ClassNotFoundException e) {
                     // if failed to read or timeout, client probably went offline
                     userPortMapping.remove(username);
@@ -352,6 +357,7 @@ public class TCPServer extends JFrame {
                     Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
+            onlineUsersList.setListData(userPortMapping.keySet().toArray());
     }
     
     @SuppressWarnings("unchecked")
