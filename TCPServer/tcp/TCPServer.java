@@ -112,7 +112,7 @@ public class TCPServer extends JFrame {
         /*Graphics part initialization*/
         initComponents();
         allUsersList.setListData(offlineUsers);
-        setStyle();
+        
 
         onlineUsersList.setListData(new String[]{});
         /**/
@@ -123,7 +123,9 @@ public class TCPServer extends JFrame {
     public static void main(String[] args) throws IOException {
         try{
             
-            TCPServer server = new TCPServer();        
+            TCPServer server = new TCPServer();
+            server.setStyle();
+            server.setVisible(true);
             ExecutorService executor = Executors.newFixedThreadPool(2);
             executor.execute(server.new RegisterTask());
             executor.execute(server.new RouteTask());
@@ -331,11 +333,20 @@ public class TCPServer extends JFrame {
                 empty.await();
             }
             System.out.println("At send Messages");         
-            for(Message message : Inbox){  
-                String recepientName = message.getRecpt();
-                Socket recepientSocket = userPortMapping.get(recepientName); 
-                ObjectOutputStream out = new ObjectOutputStream(recepientSocket.getOutputStream());
-                out.writeObject(message);
+            for(Message message : Inbox){
+                if (message.getRecpt().equals("All")){
+                    for(Object user : userPortMapping.keySet().toArray()){
+                        Socket recepientSocket = userPortMapping.get(user.toString()); 
+                        ObjectOutputStream out = new ObjectOutputStream(recepientSocket.getOutputStream());
+                        out.writeObject(message);
+                    }
+                }
+                else{
+                    String recepientName = message.getRecpt();
+                    Socket recepientSocket = userPortMapping.get(recepientName); 
+                    ObjectOutputStream out = new ObjectOutputStream(recepientSocket.getOutputStream());
+                    out.writeObject(message);
+                }
             }
             Inbox.clear();
         } 
@@ -346,6 +357,8 @@ public class TCPServer extends JFrame {
             sendLock.unlock();
         }
     }
+    
+    
     
     void sendUpdateOnlineUsersMessage() {
             UpdateOnlineUsersMessage onlineUsers = new UpdateOnlineUsersMessage(userPortMapping.keySet().toArray());
@@ -477,7 +490,7 @@ public class TCPServer extends JFrame {
         pack();
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         this.setLocation(dim.width/2-this.getSize().width/2, dim.height/2-this.getSize().height/2);
-        setVisible(true);
+        
     }// </editor-fold>    
     
     

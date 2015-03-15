@@ -20,6 +20,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.*;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +34,7 @@ import javax.swing.*;
  * @author Motasim
  */
 public class TCPClient extends JFrame {
-    
+    private javax.swing.JCheckBox BroadcastCheckBox;
     private javax.swing.JTextArea InboxTextArea;
     private javax.swing.JScrollPane inboxScrollPane;
     private javax.swing.JSeparator jSeparator1;
@@ -52,6 +54,7 @@ public class TCPClient extends JFrame {
     private final String userName;
     private static final long PERIOD = 500;
     private JButton cleaConversationButton;
+    private HashMap<String, LinkedList<String>> usersToInbox;
     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
@@ -72,6 +75,7 @@ public class TCPClient extends JFrame {
         jSeparator2 = new javax.swing.JSeparator();
         inboxLabel = new javax.swing.JLabel();
         cleaConversationButton = new javax.swing.JButton();
+        BroadcastCheckBox = new javax.swing.JCheckBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -114,6 +118,8 @@ public class TCPClient extends JFrame {
             }
         });
 
+        BroadcastCheckBox.setText("Broadcast");
+
         javax.swing.GroupLayout masterPanelLayout = new javax.swing.GroupLayout(masterPanel);
         masterPanel.setLayout(masterPanelLayout);
         masterPanelLayout.setHorizontalGroup(
@@ -136,12 +142,15 @@ public class TCPClient extends JFrame {
                     .addComponent(inboxScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 246, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(messageLabel)
-                    .addGroup(masterPanelLayout.createSequentialGroup()
-                        .addGap(147, 147, 147)
-                        .addComponent(sendButton, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(messageScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 246, Short.MAX_VALUE)
-                    .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING))
+                    .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addComponent(messageLabel)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(masterPanelLayout.createSequentialGroup()
+                        .addComponent(sendButton, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(BroadcastCheckBox)))
                 .addContainerGap())
         );
         masterPanelLayout.setVerticalGroup(
@@ -156,7 +165,9 @@ public class TCPClient extends JFrame {
                     .addGroup(masterPanelLayout.createSequentialGroup()
                         .addComponent(messageScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(sendButton)
+                        .addGroup(masterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(sendButton)
+                            .addComponent(BroadcastCheckBox))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jSeparator1, javax.swing.GroupLayout.DEFAULT_SIZE, 15, Short.MAX_VALUE)
                         .addGap(207, 207, 207))
@@ -189,7 +200,10 @@ public class TCPClient extends JFrame {
         );
 
         pack();
-    }// </editor-fold> 
+    }// </editor-fold>                        
+                       
+
+
     
     public TCPClient(String userName , Socket connection){
         
@@ -260,7 +274,17 @@ public class TCPClient extends JFrame {
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
-            if(onlineList.getSelectedValue() != null){
+            if(BroadcastCheckBox.isSelected()&&(!messageTextArea.getText().equals(""))){
+                Message broadcast = new Message(userName, "All", messageTextArea.getText());
+                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                out.writeObject(broadcast);
+                String old = InboxTextArea.getText();
+                InboxTextArea.setText(old + "\n"+"Me to All "+": "
+                                                                    + broadcast.getContents() +"\n"+ getSeparator()+"\n");
+                messageTextArea.setText("");
+            }
+            
+            else if ((onlineList.getSelectedValue() != null)&&(!messageTextArea.getText().equals(""))){
                 ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
                 out.writeObject(new Message(userName, (String)onlineList.getSelectedValue(), messageTextArea.getText()));
                 String message = messageTextArea.getText();
@@ -295,9 +319,13 @@ public class TCPClient extends JFrame {
                     } else {
                         //System.out.println(((Message) newMessage).getContents());
                         Message clientMessage = (Message)newMessage;
-                        String oldText = InboxTextArea.getText();
-                        InboxTextArea.setText(oldText + "\n"+ 
+                        if(!(clientMessage.getSender().equals(userName)&&clientMessage.getRecpt().equals("All"))){
+                            
+                            String oldText = InboxTextArea.getText();
+                            InboxTextArea.setText(oldText + "\n"+ 
                                         clientMessage.getSender() +" : "+ clientMessage.getContents()+"\n"+getSeparator());
+                        
+                        }
                     }
                 }
             } catch (IOException | ClassNotFoundException ex) {
