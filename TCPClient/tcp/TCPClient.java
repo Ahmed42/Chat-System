@@ -7,7 +7,9 @@
 package tcp;
 
 
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,6 +24,7 @@ import java.net.*;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -54,7 +57,8 @@ public class TCPClient extends JFrame {
     private final String userName;
     private static final long PERIOD = 500;
     private JButton cleaConversationButton;
-    private HashMap<String, LinkedList<String>> usersToInbox;
+   
+    private Map<String, ImageIcon> imageMap;
     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
@@ -63,6 +67,12 @@ public class TCPClient extends JFrame {
         masterPanel = new javax.swing.JPanel();
         onlineScrollPane = new javax.swing.JScrollPane();
         onlineList = new javax.swing.JList();
+        
+        /**/
+        
+        imageMap = createImageMap(new String[]{});
+        onlineList.setCellRenderer(new ListRenderer());
+        /**/
         sendButton = new javax.swing.JButton();
         inboxScrollPane = new javax.swing.JScrollPane();
         InboxTextArea = new javax.swing.JTextArea();
@@ -202,8 +212,6 @@ public class TCPClient extends JFrame {
         pack();
     }// </editor-fold>                        
                        
-
-
     
     public TCPClient(String userName , Socket connection){
         
@@ -233,6 +241,43 @@ public class TCPClient extends JFrame {
         }
         
     }
+    
+
+    
+    class ListRenderer extends DefaultListCellRenderer {
+
+        Font font = new Font("helvitica", Font.BOLD, 13);
+
+        @Override
+        public Component getListCellRendererComponent(
+                JList list, Object value, int index,
+                boolean isSelected, boolean cellHasFocus) {
+
+            JLabel label = (JLabel) super.getListCellRendererComponent(
+                    list, value, index, isSelected, cellHasFocus);
+            label.setIcon(imageMap.get((String) value));
+            label.setHorizontalTextPosition(JLabel.RIGHT);
+            label.setFont(font);
+            return label;
+        }
+    }
+
+    private Map<String, ImageIcon> createImageMap(Object[] list) {
+        
+        Map<String, ImageIcon> map = new HashMap<>();
+
+        try {
+            for(int i =  0; i<list.length ; i++){
+                map.put(list[i].toString() , new ImageIcon(getClass().getResource("/icons/icon6.png"))); 
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return map;
+    }
+   
+
+    
     
     private void logOutButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
         // Cancels the "Alive" periodic message
@@ -315,7 +360,9 @@ public class TCPClient extends JFrame {
                     Object newMessage = in.readObject();
                     if (newMessage instanceof UpdateOnlineUsersMessage) {
                         Object[] onlineUsers = ((UpdateOnlineUsersMessage) newMessage).getOnlineUsers();
-                        onlineList.setListData(onlineUsers);
+                                imageMap = createImageMap(onlineUsers);
+                                onlineList.setCellRenderer(new ListRenderer());
+                                onlineList.setListData(onlineUsers);
                     } else {
                         //System.out.println(((Message) newMessage).getContents());
                         Message clientMessage = (Message)newMessage;
