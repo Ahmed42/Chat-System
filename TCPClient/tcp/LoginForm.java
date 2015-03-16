@@ -64,9 +64,9 @@ public class LoginForm extends JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         titleLabel.setFont(new java.awt.Font("Yu Mincho Demibold", 0, 18)); // NOI18N
-        titleLabel.setText("Welcome to Chat Chat ");
+        titleLabel.setText("Welcome to Java Chat Application !");
 
-        loginButton.setText("Log in");
+        loginButton.setText("Sign in");
         loginButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -82,11 +82,11 @@ public class LoginForm extends JFrame {
             }
         });
 
-        signupLabel.setText("Not regestered  ? Please sign up :");
+        signupLabel.setText("Not registered ? Please sign up");
 
-        nameLabel.setText("User name :");
+        nameLabel.setText("User name ");
 
-        passLabel.setText("Password :");
+        passLabel.setText("Password ");
 
         guestButton.setText("Guest");
         guestButton.addActionListener(new java.awt.event.ActionListener() {
