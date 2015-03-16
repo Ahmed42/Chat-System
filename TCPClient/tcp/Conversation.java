@@ -21,19 +21,20 @@ import java.util.Date;
 public class Conversation implements Serializable{
     
     public String date;
-    public String conversation;
+    public String content;
+    boolean unreadMessageFlag;
     
-    public Conversation(String conversation, Date date){
-        this.conversation = conversation;
+    public Conversation(String content, Date date, boolean unreadMessageFlag){
+        this.content = content;
         this.date = date.toString();
-        
+        this.unreadMessageFlag = unreadMessageFlag;
     }
     
     public String getDateString(){
         return date;
     }
     
-    public String getConversation(){
-        return conversation;
+    public String getContent(){
+        return content;
     }
 }

@@ -19,15 +19,19 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.TimerTask;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 /**
  *
@@ -54,8 +58,11 @@ public class TCPClient extends JFrame {
     private final String userName;
     private static final long PERIOD = 500;
     private JButton cleaConversationButton;
-    private HashMap<String, LinkedList<String>> usersToInbox;
-    
+    //private HashMap<String, LinkedList<String>> usersToInbox;
+    HashMap<String,Conversation> conversations; // maps other clients' usernames to coversations
+    Vector<UserRow> usersDisplay; // contains the users to be displayed by thr JList, in the form: [Online status] username [Unread message status]
+    ObjectOutputStream out;
+    ObjectInputStream in;
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
@@ -84,6 +91,10 @@ public class TCPClient extends JFrame {
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
+
+        // For listening to changes in selection in the online users list, switch between conversations
+        onlineList.getSelectionModel().addListSelectionListener(new onlineUserSelectionListener());
+        onlineList.setListData(usersDisplay);
         onlineScrollPane.setViewportView(onlineList);
 
         sendButton.setText("Send");
@@ -94,7 +105,7 @@ public class TCPClient extends JFrame {
         InboxTextArea.setRows(5);
         inboxScrollPane.setViewportView(InboxTextArea);
 
-        onlineLabel.setText("Online users:");
+        onlineLabel.setText("Online users + past conversations:");
 
         messageTextArea.setColumns(20);
         messageTextArea.setRows(5);
@@ -202,19 +213,26 @@ public class TCPClient extends JFrame {
         pack();
     }// </editor-fold>                        
                        
-
-
+    // initialize DisplayUsers to loaded past conversations
+    void initializeUsersDisplay() {
+        usersDisplay = new Vector<>();
+        for(String username: conversations.keySet()) {
+            usersDisplay.add(new UserRow(username,false,conversations.get(username).unreadMessageFlag));
+        }
+    }
     
-    public TCPClient(String userName , Socket connection){
-        
+    public TCPClient(String userName , Socket connection, ObjectOutputStream out, ObjectInputStream in){
+        this.out = out;
+        this.in = in;
         setTitle(userName);
         this.connection = connection;
-        this.userName = userName;    
+        this.userName = userName;
+        LoadPastConversation();
+        initializeUsersDisplay();
         initComponents();
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         this.setLocation(dim.width/2-this.getSize().width/2, dim.height/2-this.getSize().height/2);
-        setStyle();
-        LoadPastConversation();
+        setStyle();        
         setVisible(true);
         /********************************/
         
@@ -250,15 +268,17 @@ public class TCPClient extends JFrame {
     static java.util.Timer timer;
     static ExecutorService executor;
     
-    public static void initializeTCPClient(String username, Socket connection) {
+    public static void initializeTCPClient(String username, Socket connection, ObjectOutputStream out, ObjectInputStream in) {
         try {
             connection.setSoTimeout(0);
         } catch (SocketException ex) {
             Logger.getLogger(TCPClient.class.getName()).log(Level.SEVERE, null, ex);
         }
+        
+        
         executor = Executors.newCachedThreadPool();
         
-        TCPClient client = new TCPClient(username, connection);
+        TCPClient client = new TCPClient(username, connection, out, in);
         client.setStyle();
         executor.execute(client.new RecieveTask());
         
@@ -269,6 +289,40 @@ public class TCPClient extends JFrame {
  
     }
     
+    class onlineUserSelectionListener implements ListSelectionListener {
+
+        @Override
+        public void valueChanged(ListSelectionEvent e) {
+            UserRow selectedUser = (UserRow) onlineList.getSelectedValue();
+            if(e.getValueIsAdjusting() || selectedUser == null) {
+                return;
+            }
+            
+            if(selectedUser.unreadMessage) { // remove the unread message tag
+                selectedUser.unreadMessage = false;
+                conversations.get(selectedUser.name).unreadMessageFlag = false;
+                int i = usersDisplay.indexOf(selectedUser);
+                usersDisplay.set(i, selectedUser);
+                onlineList.setListData(usersDisplay);
+            }
+            
+            Conversation currentCoversation = conversations.get(selectedUser.name);
+            
+            if( currentCoversation == null) {
+                InboxTextArea.setText("");
+            } else { // set the inbox to the selected user conversation
+                InboxTextArea.setText(currentCoversation.getContent()); 
+            }
+            
+            if(selectedUser.online) { // disable the send button in case the user is offline
+                sendButton.setEnabled(true);
+            }
+            else {
+                sendButton.setEnabled(false);
+            }        
+        }      
+    }
+    
     class SendActionListener implements ActionListener{
 
     @Override
@@ -276,21 +330,48 @@ public class TCPClient extends JFrame {
         try {
             if(BroadcastCheckBox.isSelected()&&(!messageTextArea.getText().equals(""))){
                 Message broadcast = new Message(userName, "All", messageTextArea.getText());
-                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                //ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
                 out.writeObject(broadcast);
-                String old = InboxTextArea.getText();
-                InboxTextArea.setText(old + "\n"+"Me to All "+": "
-                                                                    + broadcast.getContents() +"\n"+ getSeparator()+"\n");
+
+                String oldContent;
+                Conversation oldConversation = conversations.get("Broadcast");
+                if(oldConversation == null) {
+                    oldContent = "";
+                }
+                else {
+                    oldContent = oldConversation.getContent();
+                }
+                
+                String newContent = oldContent + "\nMe to All: " + broadcast.getContents() +"\n"+ getSeparator()+"\n";
+                Conversation newConversation = new Conversation(newContent, new Date(),false);
+                conversations.put("Broadcast",newConversation);
+                InboxTextArea.setText(newContent);
                 messageTextArea.setText("");
             }
             
-            else if ((onlineList.getSelectedValue() != null)&&(!messageTextArea.getText().equals(""))){
-                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-                out.writeObject(new Message(userName, (String)onlineList.getSelectedValue(), messageTextArea.getText()));
+            else if ((onlineList.getSelectedValue() != null)&&(!messageTextArea.getText().equals("")) ){
+                
+                //ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                
+                UserRow recipient = (UserRow) onlineList.getSelectedValue();
+                //JOptionPane.showMessageDialog(null, userName+": Sending to: " + recipient.name);
+                Message newMessage = new Message(userName, recipient.name, messageTextArea.getText());
+                System.out.println(newMessage);
+                out.writeObject(newMessage);
+                //JOptionPane.showMessageDialog(null, userName+": Sent to: " + recipient.name);
                 String message = messageTextArea.getText();
-                String old = InboxTextArea.getText();
-                InboxTextArea.setText(old + "\n"+"Me to " + onlineList.getSelectedValue()+ " : "
-                                                                    + message +"\n"+ getSeparator()+"\n");
+                
+                String oldContent;
+                Conversation oldConversation = conversations.get(recipient.name);
+                if(oldConversation == null) {
+                    oldContent = "";
+                } else {
+                    oldContent = oldConversation.getContent();
+                }
+                String newContent = oldContent + "\nMe to " + recipient.name+ ": " + message +"\n"+ getSeparator()+"\n";
+                Conversation newConversation = new Conversation(newContent, new Date(),false);
+                conversations.put(recipient.name,newConversation);
+                InboxTextArea.setText(newContent);
                 messageTextArea.setText("");
             }
         } catch (IOException ex) {
@@ -304,27 +385,94 @@ public class TCPClient extends JFrame {
         InboxTextArea.setText("");
     }  
     
+    
+    //String unreadMessageTag = "[Unread Message]", onlineTag = "[Online]", offlineTag = "[Offline]";
+    //Vector<String> listToDisplayV;    
     class RecieveTask implements Runnable {
-
+        
         @Override
         public void run() {
 
-            try {
+            try {              
                 while (true) {
                     ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
                     Object newMessage = in.readObject();
-                    if (newMessage instanceof UpdateOnlineUsersMessage) {
+                    if (newMessage instanceof UpdateOnlineUsersMessage) { // Update online users message
                         Object[] onlineUsers = ((UpdateOnlineUsersMessage) newMessage).getOnlineUsers();
-                        onlineList.setListData(onlineUsers);
-                    } else {
-                        //System.out.println(((Message) newMessage).getContents());
-                        Message clientMessage = (Message)newMessage;
-                        if(!(clientMessage.getSender().equals(userName)&&clientMessage.getRecpt().equals("All"))){
-                            
-                            String oldText = InboxTextArea.getText();
-                            InboxTextArea.setText(oldText + "\n"+ 
-                                        clientMessage.getSender() +" : "+ clientMessage.getContents()+"\n"+getSeparator());
+                        Vector<Object> onlineUsersV = new Vector<>(Arrays.asList(onlineUsers));
+                        Vector<UserRow> usersDisplayCopy = new Vector<>(usersDisplay);
+                        //System.out.println(onlineUsersV.get(0));
+                        /*for(int i=0; i< usersDisplay.size(); i++) {
+                            if(onlineUsersV.contains(usersDisplay.get(i).name)) {
+                                onlineUsersV.remove(usersDisplay.get(i).name);
+                                usersDisplay.set(i, new UserRow(usersDisplay.get(i).name,usersDisplay.get(i).online, usersDisplay.get(i).unreadMessage ));
+                            }
+                            else {
+                                if(conversations.get(user.name) != null) {
+                                    //user.online = true;
+                                    usersDisplay.set(i, new UserRow(usersDisplay.get(i).name,usersDisplay.get(i).online, usersDisplay.get(i).unreadMessage ));
+                                }
+                                else {
+                                    usersDisplay.remove(usersDisplay.get(i).name);
+                                }
+                            }
+                        }*/
+                        for(UserRow user: usersDisplayCopy) {
+                            if(onlineUsersV.contains(user.name)) {
+                                onlineUsersV.remove(user.name);
+                                //user.online = true;
+                                int i = usersDisplay.indexOf(user);
+                                usersDisplay.set(i, new UserRow(user.name, true, user.unreadMessage));
+                            }
+                            else {
+                                if(conversations.get(user.name) != null) {
+                                    //user.online = true;
+                                    int i = usersDisplay.indexOf(user);
+                                    usersDisplay.set(i, new UserRow(user.name, false, user.unreadMessage));
+                                }
+                                else {
+                                    usersDisplay.remove(user);
+                                }
+                            }
+                        }
                         
+                        for(Object user: onlineUsersV) {
+                            //System.out.println(user);
+                            usersDisplay.add(new UserRow((String)user, true, false));
+                        }
+                        onlineList.setListData(usersDisplay);
+                        
+                    } else { // users message
+                        //System.out.println(((Message) newMessage).getContents());
+                        //JOptionPane.showMessageDialog(null, userName+": Received!");
+                        Message clientMessage = (Message) newMessage;
+                        String sender = clientMessage.getSender();
+                        if (!(sender.equals(userName) && clientMessage.getRecpt().equals("All"))) {
+                            Conversation oldConversation = conversations.get(sender);
+                            String oldContent;
+                            String newContent = "\n" + sender + ": " + clientMessage.getContents() + "\n" + getSeparator() + "\n";
+
+                            if (oldConversation != null) { // user had a conversation with the client
+                                oldContent = oldConversation.getContent();
+                            } else {
+                                oldContent = "";
+                            }
+                            String contentToDisplay = oldContent + newContent;
+                            boolean unreadMessageFlag;
+
+                            if (onlineList.getSelectedValue() != null && ((UserRow) onlineList.getSelectedValue()).name.equals(sender)) { // whether to display the message or not
+                                unreadMessageFlag = false;
+                                InboxTextArea.setText(contentToDisplay);
+                            } else {
+                                unreadMessageFlag = true;
+                                for (UserRow user : usersDisplay) {
+                                    if (user.name.equals(sender)) {
+                                        user.unreadMessage = unreadMessageFlag;
+                                    }
+                                }
+                                onlineList.setListData(usersDisplay);
+                            }
+                            conversations.put(sender, new Conversation(contentToDisplay, new Date(), unreadMessageFlag));
                         }
                     }
                 }
@@ -344,7 +492,7 @@ public class TCPClient extends JFrame {
         @Override
         public void run() {
             try {
-                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                //ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
                 out.writeObject("Alive");
                 
             } catch (IOException ex) {
@@ -356,14 +504,12 @@ public class TCPClient extends JFrame {
     
     public void LoadPastConversation(){
         try {
-            
-            Conversation old;
             ObjectInputStream in = new ObjectInputStream(new FileInputStream(userName+".dat"));
-            old = (Conversation)in.readObject();
-            InboxTextArea.setText(old.getConversation());
+            conversations = (HashMap<String,Conversation>)in.readObject();
             
         } catch (IOException|ClassNotFoundException ex) {
-            System.out.println("Now history file found");
+            System.out.println("No history file found");
+            conversations = new HashMap<>();
         }
     }
     
@@ -371,9 +517,10 @@ public class TCPClient extends JFrame {
         try {
             
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(userName+".dat"));
-            Conversation old = new Conversation(InboxTextArea.getText(), new Date());
-            if(! old.getConversation().equals(""))
-                out.writeObject(old);
+            //Conversation old = new Conversation(InboxTextArea.getText(), new Date());
+            //if(! old.getConversation().equals(""))
+              //  out.writeObject(old);
+            out.writeObject(conversations);
             
         } catch (IOException ex) {
             Logger.getLogger(TCPClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -391,5 +538,24 @@ class UpdateOnlineUsersMessage implements Serializable {
     
     Object[] getOnlineUsers() {
         return onlineUsers;
+    }
+}
+
+class UserRow {
+    String name;
+    boolean unreadMessage, online;
+    UserRow(String name,boolean online,boolean unreadMessage) {
+        this.name = name;
+        this.unreadMessage = unreadMessage;
+        this.online = online;
+    }
+    String unreadMessageTag = "[Unread Message]", onlineTag = "[Online]", offlineTag = "[Offline]";
+    @Override
+    public String toString() {
+        String rep = 
+                (online ? onlineTag : offlineTag) +
+                name +
+                (unreadMessage ? unreadMessageTag : "");
+        return rep;
     }
 }

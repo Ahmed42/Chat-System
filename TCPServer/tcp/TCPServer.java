@@ -68,14 +68,16 @@ public class TCPServer extends JFrame {
     Condition empty;
     FileOutputStream fileOut;
     FileInputStream fileIn;
-    private final int TIMEOUT_DURATON = 5000;
+    
+    
+    private final int TIMEOUT_DURATON = 2000;
     
     public TCPServer() throws IOException{
         // Deserialize registered users and saved messages
         try {
             fileIn = new FileInputStream("registered_users.dat");
-            ObjectInputStream in = new ObjectInputStream(fileIn);
-            registeredUsers = (Vector<UserCredentials>) in.readObject();
+            ObjectInputStream fin = new ObjectInputStream(fileIn);
+            registeredUsers = (Vector<UserCredentials>) fin.readObject();
             fileOut = new FileOutputStream("registered_users.dat");
         } catch (Exception ex) {
             fileOut = new FileOutputStream("registered_users.dat");
@@ -147,7 +149,8 @@ public class TCPServer extends JFrame {
     }*/
     
     class RegisterTask implements Runnable{
-        
+        ObjectInputStream in;
+        ObjectOutputStream out;
         @Override
         public void run() {
             ExecutorService executor = Executors.newCachedThreadPool();
@@ -155,8 +158,8 @@ public class TCPServer extends JFrame {
                 while(true){
                     Socket connection = server.accept();
                     connection.setSoTimeout(TIMEOUT_DURATON);
-                    ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                    ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                    in = new ObjectInputStream(connection.getInputStream());
+                    out = new ObjectOutputStream(connection.getOutputStream());
                             
                     Object newUser = in.readObject();
                     String name;
@@ -210,7 +213,7 @@ public class TCPServer extends JFrame {
                     onlineUsersList.setListData(userPortMapping.keySet().toArray());
                     System.out.println("At register task");
                     allUsersList.setListData(registeredUsers);
-                    executor.execute(new RecieveTask(name,connection));
+                    executor.execute(new RecieveTask(name,connection,out,in));
                 }
             }
             catch (Exception ex) {
@@ -255,29 +258,33 @@ public class TCPServer extends JFrame {
   
     
     class RecieveTask implements Runnable{
-        
+        ObjectOutputStream out;
+        ObjectInputStream in;
         public Socket client;
         String username;
         
-        public RecieveTask(String name, Socket client){
+        public RecieveTask(String name, Socket client, ObjectOutputStream out, ObjectInputStream in){
             this.client = client;
             this.username = name;
-            try {
+            this.out = out;
+            this.in = in;
+            /*try {
                 this.client.setSoTimeout(TIMEOUT_DURATON);
             } catch (SocketException ex) {
                 Logger.getLogger(TCPServer.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            }*/
         }
 
         @Override
         public void run() {
-            ObjectInputStream in;
+            //ObjectInputStream in;
 
             while (true) {
                 System.out.println("At recive task");
                 try {
-                    in = new ObjectInputStream(client.getInputStream());
+                    //ObjectInputStream in = new ObjectInputStream(client.getInputStream());
                     Object newMessage = in.readObject();
+                    System.out.println("Message read");
                     if (newMessage instanceof Message) {
                         addMessage((Message)newMessage);
                     }
@@ -285,6 +292,7 @@ public class TCPServer extends JFrame {
                         client.setSoTimeout(TIMEOUT_DURATON);
                     }*/
                 } catch (IOException | ClassNotFoundException e) {
+                    System.out.println("can't read:" + e);
                     // if failed to read or timeout, client probably went offline
                     userPortMapping.remove(username);
                     if(isUserRegistered(username)) {

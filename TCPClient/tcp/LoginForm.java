@@ -194,15 +194,18 @@ public class LoginForm extends JFrame {
         
     }
     
-
     
-    private final int TIMEOUT_DURATON = 8000;
+    String ip = "localhost";
+    
+    private final int TIMEOUT_DURATON = 15000;
     public void performLogin(){
         
         //Socket loginSocket;
         try{
+         InetAddress address = InetAddress.getByName(ip);
+         //System.out.println(address.getHostAddress());
+         socket = new Socket(ip , 8000);
          
-         socket = new Socket("localhost" , 8000);
          socket.setSoTimeout(TIMEOUT_DURATON);
          System.out.println("Here 1"); 
          ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
@@ -221,7 +224,7 @@ public class LoginForm extends JFrame {
          if(serverResponse == Response.SignInSuccess) {
              // Sign in success
              // proceed to initialize the client
-             TCPClient.initializeTCPClient(this.getUserName(),socket);
+             TCPClient.initializeTCPClient(this.getUserName(),socket,out,in);
              //this.setVisible(false);
              this.dispose();
          }
@@ -248,8 +251,8 @@ public class LoginForm extends JFrame {
 
     private void signupButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
         try{
-         
-         socket = new Socket("localhost" , 8000);
+         InetAddress address = InetAddress.getByName(ip);
+         socket = new Socket(ip , 8000);
          socket.setSoTimeout(TIMEOUT_DURATON);
          ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
          
@@ -263,7 +266,7 @@ public class LoginForm extends JFrame {
          if(serverResponse == Response.SignUpSuccess) {
              // Sign in success
              // proceed to initialize the client
-             TCPClient.initializeTCPClient(this.getUserName(),socket);
+             TCPClient.initializeTCPClient(this.getUserName(),socket,out, in);
              //this.setVisible(false);
              this.dispose();
          }
@@ -284,8 +287,8 @@ public class LoginForm extends JFrame {
     // Please add the "Sign in as guest" button
     private void guestButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
         try {
-            
-            socket = new Socket("localhost" , 8000);
+            InetAddress address = InetAddress.getByName(ip);
+            socket = new Socket(ip, 8000);
             socket.setSoTimeout(TIMEOUT_DURATON);
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             
@@ -296,7 +299,7 @@ public class LoginForm extends JFrame {
             Object response = in.readObject();
             if(response instanceof GuestNameResponse) {
                 System.out.println(((GuestNameResponse) response).guestName);
-                TCPClient.initializeTCPClient(((GuestNameResponse)response).guestName,socket);
+                TCPClient.initializeTCPClient(((GuestNameResponse)response).guestName,socket,out, in);
                 this.dispose();
             }
             else {
